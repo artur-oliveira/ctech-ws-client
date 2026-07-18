@@ -1,0 +1,47 @@
+{
+  "name": "@aoctech/ws-client",
+  "version": "1.0.0",
+  "description": "Resilient WebSocket React hook shared across CTech apps: app-level heartbeat, backoff reconnect, reconnect-on-token-refresh.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/artur-oliveira/ctech-ws-client"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test"
+  },
+  "keywords": [
+    "websocket",
+    "react",
+    "hook",
+    "ctech"
+  ],
+  "author": "Artur Oliveira",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "react": "^19.2.4",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
