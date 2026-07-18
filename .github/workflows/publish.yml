@@ -1,0 +1,25 @@
+name: Publish
+
+# Publishes to npm whenever a GitHub Release is published. Bump the version
+# in package.json, tag it (e.g. v1.0.1), and publish the release from that
+# tag — this workflow does the rest.
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC token for npm trusted publishing (no NPM_TOKEN secret needed)
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm test
+      - run: npm publish
