@@ -1,6 +1,6 @@
 {
   "name": "@aoctech/ws-client",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Resilient WebSocket React hook shared across CTech apps: app-level heartbeat, backoff reconnect, reconnect-on-token-refresh.",
   "repository": {
     "type": "git",

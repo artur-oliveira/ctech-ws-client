@@ -64,7 +64,17 @@ different mechanisms:
 
 ## API
 
-- `useWebSocket(options): { status }` — see Usage above.
+- `useWebSocket(options): { status, attempt, send, reconnect }` — see Usage above.
+- `status: WSStatus` — `disconnected` | `connecting` | `reconnecting` | `connected` | `error`.
+- `attempt: number` — reconnect attempts since the last successful open (capped at
+  `MAX_RECONNECT_ATTEMPTS`). Reset to `0` on open.
+- `send(value: object): boolean` — sends a JSON-encoded frame if the socket is open; returns
+  `false` (and is a no-op) when not connected. Use it for app frames like `act`, `chat`, `ready`.
+- `reconnect(): void` — forces an immediate reconnect with no backoff, the same path a token
+  refresh takes. Wire a "Reconnect now" button to it.
+- `onOpen?: () => void` — option fired once after the socket opens and the auth token frame is
+  sent. Put a post-auth follow-up frame here (e.g. a ping that makes the server run a reconnect
+  command) instead of racing the open event.
 - `type WSStatus = 'disconnected' | 'connecting' | 'reconnecting' | 'connected' | 'error'`
 - `nextBackoffDelay(attempt)`, `isPongMessage(data)` — the pure helpers behind the hook, exported
   standalone for testing.
