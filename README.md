@@ -115,3 +115,20 @@ gh release create vX.Y.Z --generate-notes
 ## License
 
 MIT
+
+## Implementation reference (file:line) — audited
+
+Anchors into `src/` (`src/index.ts:1-2` re-exports `heartbeat` + `useWebSocket`):
+
+- `useWebSocket(options)` — `src/useWebSocket.ts:45`. Options `UseWebSocketOptions` `:14`
+  (`url`, `onMessage`, `enabled?`, `authToken?` first-frame JWT, `subscribeToken?` token-change →
+  immediate reconnect, `onOpen?`); result `UseWebSocketResult` `:35` (`status` `WSStatus` `:12`,
+  `attempt`, `send` `:174`, `reconnect` `:164`).
+- First-frame auth: on open, sends `{"token": <jwt>}` if `authToken` set — `src/useWebSocket.ts:118-124`.
+- Heartbeat: app-level `{"type":"ping"}` every 20s, 10s pong timeout → close on miss —
+  `src/useWebSocket.ts:98-104`.
+- Heartbeat helpers/constants — `src/heartbeat.ts`: `nextBackoffDelay` `:12`, `isPongMessage` `:16`,
+  `BASE_DELAY_MS` `:1`, `MAX_DELAY_MS` `:2`, `MAX_RECONNECT_ATTEMPTS` `:3`, `CLIENT_PING_INTERVAL_MS`
+  `:9`, `CLIENT_PONG_TIMEOUT_MS` `:10`.
+- No in-repo hook test (see README "Development"); behavior is covered in consuming apps.
+
