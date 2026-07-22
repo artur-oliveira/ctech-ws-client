@@ -18,6 +18,13 @@ export interface UseWebSocketOptions {
   /** JWT sent as the first frame after the upgrade (M3) so it never appears in the URL. */
   authToken?: string
   /**
+   * Invite/share code bundled into the same first frame as `authToken`
+   * (`{"token": ..., "share_code": ...}`), for servers that gate private-room
+   * access at the WS upgrade in addition to the JWT. Omitted from the frame
+   * when unset.
+   */
+  shareCode?: string
+  /**
    * Subscribes to access-token changes (e.g. a silent OAuth refresh). Each app
    * passes its own client.ts's token pub/sub. On a genuinely new token, the
    * hook closes the current socket and reconnects immediately with no backoff
@@ -47,6 +54,7 @@ export function useWebSocket({
   onMessage,
   enabled = true,
   authToken,
+  shareCode,
   subscribeToken,
   onOpen,
 }: UseWebSocketOptions): UseWebSocketResult {
@@ -55,6 +63,7 @@ export function useWebSocket({
   const onMessageRef = useRef(onMessage)
   const onOpenRef = useRef(onOpen)
   const authTokenRef = useRef(authToken)
+  const shareCodeRef = useRef(shareCode)
   const attemptsRef = useRef(0)
   const reconnectNowRef = useRef<(() => void) | null>(null)
   const sendRef = useRef<(value: object) => boolean>(() => false)
@@ -69,6 +78,10 @@ export function useWebSocket({
 
   useLayoutEffect(() => {
     authTokenRef.current = authToken
+  })
+
+  useLayoutEffect(() => {
+    shareCodeRef.current = shareCode
   })
 
   useEffect(() => {
@@ -117,7 +130,9 @@ export function useWebSocket({
         setStatus('connected')
         if (authTokenRef.current) {
           try {
-            sock.send(JSON.stringify({token: authTokenRef.current}))
+            const frame: {token: string; share_code?: string} = {token: authTokenRef.current}
+            if (shareCodeRef.current) frame.share_code = shareCodeRef.current
+            sock.send(JSON.stringify(frame))
           } catch {
             // ignore — server closes the socket if auth is missing
           }

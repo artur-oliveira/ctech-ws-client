@@ -17,12 +17,14 @@ Repo dir is `ctech-ws-client`; npm name is `@aoctech/ws-client`. Peer dep `react
 
 - `useWebSocket(options)` — `src/useWebSocket.ts:45`.
   - `UseWebSocketOptions` `:14`: `url` (null disables), `onMessage`, `enabled?`, `authToken?`
-    (sent as first frame), `subscribeToken?` (token-change notifier → immediate reconnect),
-    `onOpen?` (fired after open + auth frame).
+    (sent as first frame), `shareCode?` (bundled into the same first frame for servers that gate
+    private-room access at the WS upgrade), `subscribeToken?` (token-change notifier → immediate
+    reconnect), `onOpen?` (fired after open + auth frame).
   - `UseWebSocketResult` `:35`: `status: WSStatus` `:12`, `attempt` (reconnect count, capped),
     `send(value): boolean` `:174` (no-op/returns false when not open), `reconnect()` `:164` (immediate,
     no backoff).
-  - First-frame JWT auth: on open, if `authToken` is set, sends `{"token": <jwt>}` `:118-124`.
+  - First-frame JWT auth: on open, if `authToken` is set, sends `{"token": <jwt>}`, plus
+    `"share_code": <shareCode>` when `shareCode` is set `:118-124`.
   - Heartbeat: app-level `{"type":"ping"}` every 20s, arms a 10s pong timeout, closes on miss
     `:98-104`. (Browser can't send native WS ping; `README.md` explains the two-direction split.)
 - Heartbeat helpers/constants — `src/heartbeat.ts`: `nextBackoffDelay` `:12` (exponential, cap 30s),
