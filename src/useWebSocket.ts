@@ -37,14 +37,20 @@ export interface UseWebSocketOptions {
    * run a reconnect/rebind command) put it here instead of racing the open.
    */
   onOpen?: () => void
+  /** If set, configures ws.binaryType. Default is undefined (standard string messages). */
+  binaryType?: 'arraybuffer' | 'blob'
+  /** Optional custom encoder for outgoing messages. Defaults to JSON.stringify. */
+  encode?: (value: any) => string | ArrayBuffer | Blob
+  /** Optional custom decoder for incoming messages. Defaults to JSON.parse. */
+  decode?: (data: any) => any
 }
 
 export interface UseWebSocketResult {
   status: WSStatus
   /** Number of reconnect attempts since the last successful open (capped at MAX_RECONNECT_ATTEMPTS). */
   attempt: number
-  /** Sends a JSON-encoded frame if the socket is open; returns false if not connected. */
-  send: (value: object) => boolean
+  /** Sends a frame if the socket is open; returns false if not connected. */
+  send: (value: any) => boolean
   /** Forces an immediate reconnect with no backoff (same path as a token refresh). */
   reconnect: () => void
 }
@@ -57,6 +63,9 @@ export function useWebSocket({
   shareCode,
   subscribeToken,
   onOpen,
+  binaryType,
+  encode,
+  decode,
 }: UseWebSocketOptions): UseWebSocketResult {
   const [status, setStatus] = useState<WSStatus>('disconnected')
   const [attempt, setAttempt] = useState(0)
@@ -66,7 +75,11 @@ export function useWebSocket({
   const shareCodeRef = useRef(shareCode)
   const attemptsRef = useRef(0)
   const reconnectNowRef = useRef<(() => void) | null>(null)
-  const sendRef = useRef<(value: object) => boolean>(() => false)
+  const sendRef = useRef<(value: any) => boolean>(() => false)
+
+  const encodeRef = useRef(encode || ((val: any) => JSON.stringify(val)))
+  const decodeRef = useRef(decode || ((data: any) => JSON.parse(data as string)))
+  const binaryTypeRef = useRef(binaryType)
 
   useLayoutEffect(() => {
     onMessageRef.current = onMessage
@@ -82,6 +95,18 @@ export function useWebSocket({
 
   useLayoutEffect(() => {
     shareCodeRef.current = shareCode
+  })
+
+  useLayoutEffect(() => {
+    encodeRef.current = encode || ((val: any) => JSON.stringify(val))
+  })
+
+  useLayoutEffect(() => {
+    decodeRef.current = decode || ((data: any) => JSON.parse(data as string))
+  })
+
+  useLayoutEffect(() => {
+    binaryTypeRef.current = binaryType
   })
 
   useEffect(() => {
@@ -111,7 +136,11 @@ export function useWebSocket({
     function startHeartbeat(sock: WebSocket) {
       pingTimer = setInterval(() => {
         if (sock.readyState !== WebSocket.OPEN) return
-        sock.send(JSON.stringify({type: 'ping'}))
+        try {
+          sock.send(encodeRef.current({type: 'ping'}))
+        } catch {
+          // ignore
+        }
         pongTimer = setTimeout(() => sock.close(), CLIENT_PONG_TIMEOUT_MS)
       }, CLIENT_PING_INTERVAL_MS)
     }
@@ -123,6 +152,10 @@ export function useWebSocket({
       const sock = new WebSocket(url!)
       ws = sock
 
+      if (binaryTypeRef.current) {
+        sock.binaryType = binaryTypeRef.current
+      }
+
       sock.onopen = () => {
         if (ws !== sock) return
         attemptsRef.current = 0
@@ -130,9 +163,9 @@ export function useWebSocket({
         setStatus('connected')
         if (authTokenRef.current) {
           try {
-            const frame: {token: string; share_code?: string} = {token: authTokenRef.current}
+            const frame: Record<string, any> = {token: authTokenRef.current}
             if (shareCodeRef.current) frame.share_code = shareCodeRef.current
-            sock.send(JSON.stringify(frame))
+            sock.send(encodeRef.current(frame))
           } catch {
             // ignore — server closes the socket if auth is missing
           }
@@ -144,7 +177,7 @@ export function useWebSocket({
       sock.onmessage = (evt) => {
         if (ws !== sock) return
         try {
-          const data = JSON.parse(evt.data as string)
+          const data = decodeRef.current(evt.data)
           if (isPongMessage(data)) {
             if (pongTimer) clearTimeout(pongTimer)
             return
@@ -186,10 +219,10 @@ export function useWebSocket({
       connect()
     }
 
-    sendRef.current = (value: object) => {
+    sendRef.current = (value: any) => {
       if (ws?.readyState !== WebSocket.OPEN) return false
       try {
-        ws.send(JSON.stringify(value))
+        ws.send(encodeRef.current(value))
         return true
       } catch {
         return false
@@ -209,7 +242,7 @@ export function useWebSocket({
     }
   }, [url, enabled])
 
-  const send = useCallback((value: object) => sendRef.current(value), [])
+  const send = useCallback((value: any) => sendRef.current(value), [])
   const reconnect = useCallback(() => reconnectNowRef.current?.(), [])
 
   return {status, attempt, send, reconnect}
