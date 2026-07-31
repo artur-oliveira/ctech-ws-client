@@ -38,3 +38,11 @@ Repo dir is `ctech-ws-client`; npm name is `@aoctech/ws-client`. Peer dep `react
   apps (`ctech-dfe/ui/.../useRealtimeUpdates.test.tsx`). Don't add a test harness here unless you
   also add react-test-renderer.
 - MIT licensed. Publish via npm OIDC trusted publishing on GitHub Release.
+
+## Mandatory Documentation Policy
+
+**Every code change MUST be documented.**
+
+There are NO exceptions.
+
+Any modification affecting behavior, architecture, APIs, integrations, configuration, deployment, security, business rules, or developer workflow MUST include the corresponding documentation update in the same change.
