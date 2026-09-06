@@ -132,3 +132,11 @@ Anchors into `src/` (`src/index.ts:1-2` re-exports `heartbeat` + `useWebSocket`)
   `:9`, `CLIENT_PONG_TIMEOUT_MS` `:10`.
 - No in-repo hook test (see README "Development"); behavior is covered in consuming apps.
 
+## Mandatory Documentation Policy
+
+**Every code change MUST be documented.**
+
+There are NO exceptions.
+
+Any modification affecting behavior, architecture, APIs, integrations, configuration, deployment, security, business rules, or developer workflow MUST include the corresponding documentation update in the same change.
+
