@@ -141,7 +141,7 @@ There are NO exceptions.
 Any modification affecting behavior, architecture, APIs, integrations, configuration, deployment, security, business rules, or developer workflow MUST include the corresponding documentation update in the same change.
 
 
-## Opt-in continuous recovery (1.3.1)
+## Opt-in continuous recovery (1.4.0)
 
 Auction enables `reconnectForever`, `reconnectJitter`, `recoverOnNetworkRestore` and `connectTimeoutMs: 10000`. The legacy ten-attempt cap and deterministic delay remain the defaults. Continuous recovery caps backoff at 30 seconds, uses equal jitter when enabled, and restarts on online/focus/visibility events after disconnect. A connecting timeout prevents a hung handshake. Token refresh still uses subscribeToken. Timers/listeners are removed on unmount and manual reconnect clears heartbeat state. Protobuf encoders can return ArrayBufferView directly.
 
