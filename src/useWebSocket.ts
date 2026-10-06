@@ -40,9 +40,17 @@ export interface UseWebSocketOptions {
   /** If set, configures ws.binaryType. Default is undefined (standard string messages). */
   binaryType?: 'arraybuffer' | 'blob'
   /** Optional custom encoder for outgoing messages. Defaults to JSON.stringify. */
-  encode?: (value: any) => string | ArrayBuffer | Blob
+  encode?: (value: any) => string | ArrayBuffer | Blob | ArrayBufferView
   /** Optional custom decoder for incoming messages. Defaults to JSON.parse. */
   decode?: (data: any) => any
+  /** Continue recovery after the legacy ten-attempt limit. Opt-in. */
+  reconnectForever?: boolean
+  /** Equal jitter spreads reconnections across clients. Opt-in. */
+  reconnectJitter?: boolean
+  /** Recover immediately on online/focus/visible events. Opt-in. */
+  recoverOnNetworkRestore?: boolean
+  /** Bound a socket stuck in CONNECTING; zero keeps legacy behavior. */
+  connectTimeoutMs?: number
 }
 
 export interface UseWebSocketResult {
@@ -66,6 +74,10 @@ export function useWebSocket({
   binaryType,
   encode,
   decode,
+  reconnectForever = false,
+  reconnectJitter = false,
+  recoverOnNetworkRestore = false,
+  connectTimeoutMs = 0,
 }: UseWebSocketOptions): UseWebSocketResult {
   const [status, setStatus] = useState<WSStatus>('disconnected')
   const [attempt, setAttempt] = useState(0)
@@ -91,7 +103,7 @@ export function useWebSocket({
 
   useLayoutEffect(() => {
     authTokenRef.current = authToken
-  })
+  }, [authToken])
 
   useLayoutEffect(() => {
     shareCodeRef.current = shareCode
@@ -125,6 +137,7 @@ export function useWebSocket({
     let pingTimer: ReturnType<typeof setInterval> | null = null
     let pongTimer: ReturnType<typeof setTimeout> | null = null
     let ws: WebSocket | null = null
+    let connectingTimer: ReturnType<typeof setTimeout> | null = null
 
     function clearHeartbeat() {
       if (pingTimer) clearInterval(pingTimer)
@@ -150,6 +163,9 @@ export function useWebSocket({
 
       setStatus(attemptsRef.current === 0 ? 'connecting' : 'reconnecting')
       const sock = new WebSocket(url!)
+      if (connectTimeoutMs > 0) connectingTimer = setTimeout(() => {
+        if (ws === sock && sock.readyState === WebSocket.CONNECTING) sock.close();
+      }, connectTimeoutMs)
       ws = sock
 
       if (binaryTypeRef.current) {
@@ -158,6 +174,8 @@ export function useWebSocket({
 
       sock.onopen = () => {
         if (ws !== sock) return
+        if (connectingTimer) clearTimeout(connectingTimer)
+        connectingTimer = null
         attemptsRef.current = 0
         setAttempt(0)
         setStatus('connected')
@@ -197,15 +215,19 @@ export function useWebSocket({
         // this one — this is a stale close event, ignore it.
         if (ws !== sock) return
         clearHeartbeat()
+        if (connectingTimer) clearTimeout(connectingTimer)
+        connectingTimer = null
         ws = null
         if (cancelled) return
         setStatus('disconnected')
 
         attemptsRef.current++
         setAttempt(attemptsRef.current)
-        if (attemptsRef.current > MAX_RECONNECT_ATTEMPTS) return
+        if (!reconnectForever && attemptsRef.current > MAX_RECONNECT_ATTEMPTS) return
 
-        timer = setTimeout(connect, nextBackoffDelay(attemptsRef.current))
+        const ceiling = nextBackoffDelay(attemptsRef.current)
+        const delay = reconnectJitter ? Math.floor(ceiling / 2 + Math.random() * ceiling / 2) : ceiling
+        timer = setTimeout(connect, delay)
       }
     }
 
@@ -213,6 +235,8 @@ export function useWebSocket({
       attemptsRef.current = 0
       setAttempt(0)
       if (timer) clearTimeout(timer)
+      if (connectingTimer) clearTimeout(connectingTimer)
+      clearHeartbeat()
       const stale = ws
       ws = null // makes the stale socket's onclose guard (ws !== sock) a no-op
       stale?.close()
@@ -229,6 +253,16 @@ export function useWebSocket({
       }
     }
 
+    function recover() {
+      if (cancelled || ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) return
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return
+      reconnectNowRef.current?.()
+    }
+    if (recoverOnNetworkRestore && typeof window !== 'undefined') {
+      window.addEventListener('online', recover)
+      window.addEventListener('focus', recover)
+      document.addEventListener('visibilitychange', recover)
+    }
     connect()
 
     return () => {
@@ -237,10 +271,16 @@ export function useWebSocket({
       sendRef.current = () => false
       if (timer) clearTimeout(timer)
       clearHeartbeat()
+      if (connectingTimer) clearTimeout(connectingTimer)
+      if (recoverOnNetworkRestore && typeof window !== 'undefined') {
+        window.removeEventListener('online', recover)
+        window.removeEventListener('focus', recover)
+        document.removeEventListener('visibilitychange', recover)
+      }
       ws?.close(1000)
       ws = null
     }
-  }, [url, enabled])
+  }, [url, enabled, reconnectForever, reconnectJitter, recoverOnNetworkRestore, connectTimeoutMs])
 
   const send = useCallback((value: any) => sendRef.current(value), [])
   const reconnect = useCallback(() => reconnectNowRef.current?.(), [])

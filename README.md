@@ -140,3 +140,11 @@ There are NO exceptions.
 
 Any modification affecting behavior, architecture, APIs, integrations, configuration, deployment, security, business rules, or developer workflow MUST include the corresponding documentation update in the same change.
 
+
+## Opt-in continuous recovery (1.3.1)
+
+Auction enables `reconnectForever`, `reconnectJitter`, `recoverOnNetworkRestore` and `connectTimeoutMs: 10000`. The legacy ten-attempt cap and deterministic delay remain the defaults. Continuous recovery caps backoff at 30 seconds, uses equal jitter when enabled, and restarts on online/focus/visibility events after disconnect. A connecting timeout prevents a hung handshake. Token refresh still uses subscribeToken. Timers/listeners are removed on unmount and manual reconnect clears heartbeat state. Protobuf encoders can return ArrayBufferView directly.
+
+Socket open does not imply domain synchronization: consuming apps must wait for an authenticated snapshot, detect sequence gaps/duplicates, and disable sensitive actions until synchronized. Heartbeat payloads use the configured encoder/decoder (binary protobuf is supported).
+
+Regression tests cover retries beyond ten attempts, legacy limits, hung handshakes, missed/received pong, token-refresh replacement and stale close events. Token ref synchronization depends on changes to authToken rather than every render, so a subscription update cannot be overwritten by a stale prop during a status render.
