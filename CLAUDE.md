@@ -11,10 +11,10 @@ wins and this file must be fixed. Install on a new machine:
 This is a shared frontend package consumed (or meant to be consumed) by every CTech product UI —
 breaking changes here should be versioned and communicated, not made casually.
 
-Confirmed consumers today (grepped sibling `ui/package.json` files, read-only): **ctech-account**,
-**ctech-wallet**, **ctech-dfe** and **ctech-poker** all depend on `@aoctech/ws-client@^1.3.0`.
-`ctech-billing` does not (its portal has no realtime/websocket surface). Adoption here is strong —
-4 of 5 product UIs — unlike `ctech-ui`, which only `ctech-billing` consumes.
+Package version `1.4.0`. Confirmed consumers (sibling `ui/package.json`, 2026-10-19): **ctech-billing**
+(`^1.4.0`), **ctech-wallet** (`^1.4.0`), **ctech-dfe** (`^1.4.0`), **ctech-account** (`^1.3.0`) and
+**ctech-poker** (`^1.3.0`) — all five product UIs. Billing also keeps a local realtime layer that the
+standardization plan (Phase 4) moves into this package.
 
 ## CTech Family — Cross-Repo Awareness (IMPORTANT)
 
