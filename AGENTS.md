@@ -1,5 +1,13 @@
 # AGENTS.md — ctech-ws-client (npm `@aoctech/ws-client`)
 
+## CTech Standards (mandatory)
+
+Before writing, changing or reviewing any code or infra here, load the `ctech-dev-standards` skill (plugin
+`ctech-skills`, repo github.com/artur-oliveira/ctech-skills). It is the single source of truth for backend,
+frontend and infra (patterns, resilience, scale, cost). If anything in this file contradicts it, the skill
+wins and this file must be fixed. Install on a new machine:
+`/plugin marketplace add artur-oliveira/ctech-skills` then `/plugin install ctech-skills@ctech-skills`.
+
 **Reuse me, don't fork.** This is the one resilient WebSocket React hook for CTech SPAs (dfe, wallet).
 If your app needs a realtime socket, import this — the server side of the fix (native WS
 ping/pong control frames) lives in each app's own `ws.go`, but the client heartbeat/backoff/
